@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./db'); 
 require('dotenv').config();
+
+
 // upload
 const multer = require('multer'); 
 const path = require('path');
@@ -38,7 +40,17 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');
   }
-  const fileUrl = `http://localhost:4000/uploads/${req.file.filename}`;
+  // const fileUrl = `http://localhost:4000/uploads/${req.file.filename}`;
+  // --- SỬA ĐOẠN NÀY ---
+  // Tự động lấy giao thức (http hoặc https)
+  // Render thường dùng proxy nên cần kiểm tra header 'x-forwarded-proto' trước
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  
+  // Tự động lấy tên domain (localhost:4000 hoặc app.onrender.com)
+  const host = req.get('host');
+
+  // Ghép lại thành đường dẫn hoàn chỉnh
+  const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
   res.json({ url: fileUrl });
 });
 
