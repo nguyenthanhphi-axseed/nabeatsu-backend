@@ -1,53 +1,54 @@
-const express = require('express');
-const cors = require('cors');
-const pool = require('./db'); 
-require('dotenv').config();
-
+const express = require("express");
+const cors = require("cors");
+const pool = require("./db");
+require("dotenv").config();
 
 // upload
-const multer = require('multer'); 
-const path = require('path');
+const multer = require("multer");
+const path = require("path");
 
 const app = express();
 const PORT = 4000;
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(express.json()); // Read JSON bodies
-
-
-
 
 // ==========================================
 // 4. Upload file
 // ==========================================
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/') // Save to folder uploads
+    cb(null, "uploads/"); // Save to folder uploads
   },
   filename: function (req, file, cb) {
     // file name: time + name
-    cb(null, Date.now() + '-' + file.originalname)
-  }
+    cb(null, Date.now() + "-" + file.originalname);
+  },
 });
 
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const upload = multer({ storage: storage });
 
 // --- API UPLOAD FILE ---
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post("/api/upload", upload.single("file"), (req, res) => {
   if (!req.file) {
-    return res.status(400).send('No file uploaded.');
+    return res.status(400).send("No file uploaded.");
   }
   // const fileUrl = `http://localhost:4000/uploads/${req.file.filename}`;
   // --- SỬA ĐOẠN NÀY ---
   // Tự động lấy giao thức (http hoặc https)
   // Render thường dùng proxy nên cần kiểm tra header 'x-forwarded-proto' trước
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+
   // Tự động lấy tên domain (localhost:4000 hoặc app.onrender.com)
-  const host = req.get('host');
+  const host = req.get("host");
 
   // Ghép lại thành đường dẫn hoàn chỉnh
   const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
@@ -67,17 +68,27 @@ const checkAho = (number, specialNum) => {
 // ==========================================
 // 2. API: GET GAME DATA
 // ==========================================
-app.get('/api/game-data', async (req, res) => {
+app.get("/api/game-data", async (req, res) => {
   try {
     // Get data from DB
-    const result = await pool.query('SELECT * FROM game_config WHERE id = 1');
-    
+    const result = await pool.query("SELECT * FROM game_config WHERE id = 1");
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Config not found (Please run seed.js)" });
+      return res
+        .status(404)
+        .json({ message: "Config not found (Please run seed.js)" });
     }
 
     const config = result.rows[0];
-    const { start_num, end_num, special_num, magic_word, aho_text, aho_image_url, aho_sound_url } = config;
+    const {
+      start_num,
+      end_num,
+      special_num,
+      magic_word,
+      aho_text,
+      aho_image_url,
+      aho_sound_url,
+    } = config;
 
     // Sequence Generation
     const sequence = [];
@@ -89,12 +100,12 @@ app.get('/api/game-data', async (req, res) => {
         step: i,
         value: String(i), // default number as string
         is_aho: isAho,
-        assets: {} // default empty assets
+        assets: {}, // default empty assets
       };
 
       // if Aho, add assets
       if (isAho) {
-        if (aho_text) stepData.assets.text = aho_text;     
+        if (aho_text) stepData.assets.text = aho_text;
         if (aho_image_url) stepData.assets.image = aho_image_url;
         if (aho_sound_url) stepData.assets.sound = aho_sound_url;
       }
@@ -106,18 +117,26 @@ app.get('/api/game-data', async (req, res) => {
     sequence.push({
       step: end_num + 1,
       value: magic_word,
-      is_aho: true,  
+      is_aho: true,
       assets: {
-        sound : "https://www.myinstants.com/media/sounds/meme-de-creditos-finales.mp3"
-      }
+        sound:
+          "https://www.myinstants.com/media/sounds/meme-de-creditos-finales.mp3",
+      },
     });
 
     // response
     res.json({
-      config: { start: start_num, end: end_num, special_num: special_num, magic_word: magic_word, aho_text: aho_text, aho_image_url: aho_image_url, aho_sound_url: aho_sound_url }, 
-      sequence: sequence
+      config: {
+        start: start_num,
+        end: end_num,
+        special_num: special_num,
+        magic_word: magic_word,
+        aho_text: aho_text,
+        aho_image_url: aho_image_url,
+        aho_sound_url: aho_sound_url,
+      },
+      sequence: sequence,
     });
-
   } catch (err) {
     console.error("GET Error:", err);
     res.status(500).json({ error: "Server Error" });
@@ -127,22 +146,33 @@ app.get('/api/game-data', async (req, res) => {
 // ==========================================
 // 3. Update Game Settings
 // ==========================================
-app.put('/api/settings', async (req, res) => {
+app.put("/api/settings", async (req, res) => {
   try {
-    const { 
-      start_num, end_num, special_num, magic_word, 
-      aho_text, aho_image_url, aho_sound_url 
+    const {
+      start_num,
+      end_num,
+      special_num,
+      magic_word,
+      aho_text,
+      aho_image_url,
+      aho_sound_url,
     } = req.body;
 
     // validation
     if (!start_num || !end_num || !special_num) {
-      return res.status(400).json({ error: "Start, End, and Special Num are required" });
+      return res
+        .status(400)
+        .json({ error: "Start, End, and Special Num are required" });
     }
     if (Number(start_num) >= Number(end_num)) {
-      return res.status(400).json({ error: "Start Number must be smaller than End Number" });
+      return res
+        .status(400)
+        .json({ error: "Start Number must be smaller than End Number" });
     }
     if (Number(special_num) <= 0) {
-      return res.status(400).json({ error: "Special Number must be greater than 0" });
+      return res
+        .status(400)
+        .json({ error: "Special Number must be greater than 0" });
     }
 
     // Update DB
@@ -161,24 +191,26 @@ app.put('/api/settings', async (req, res) => {
     `;
 
     const values = [
-      start_num, end_num, special_num, magic_word, 
-      aho_text || null, aho_image_url || null, aho_sound_url || null
+      start_num,
+      end_num,
+      special_num,
+      magic_word,
+      aho_text || null,
+      aho_image_url || null,
+      aho_sound_url || null,
     ];
 
     const result = await pool.query(query, values);
 
     res.json({
       message: "Settings updated successfully",
-      data: result.rows[0]
+      data: result.rows[0],
     });
-
   } catch (err) {
     console.error("PUT Error:", err);
     res.status(500).json({ error: "Database Update Error" });
   }
 });
-
-
 
 app.listen(PORT, () => {
   console.log(`Backend is running on http://localhost:${PORT}`);
