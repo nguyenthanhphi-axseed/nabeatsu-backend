@@ -229,7 +229,7 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    // 2. DB Upsert (Nếu có thì update, chưa có thì insert)
+    // 2. DB Upsert
     const query = `
       INSERT INTO users (line_user_id, display_name, picture_url)
       VALUES ($1, $2, $3)
@@ -280,8 +280,7 @@ app.get("/api/comments", async (req, res) => {
         [line_user_id],
       );
       if (userRes.rows.length > 0) viewerId = userRes.rows[0].id;
-      else return res.status(401).json({ message: "User not found" });
-    }
+    } else return res.status(401).json({ message: "User not found" });
 
     // 2. Main Query
     const orderBy =
@@ -482,8 +481,7 @@ app.get("/api/comments/:comment_id/replies", async (req, res) => {
         [line_user_id],
       );
       if (userRes.rows.length > 0) viewerId = userRes.rows[0].id;
-      else return res.status(401).json({ message: "User not found" });
-    }
+    } else return res.status(401).json({ message: "User not found" });
 
     // 2. Main Query (Sort ASC)
     const query = `
