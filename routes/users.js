@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../localdb");
-
+const pool = require("../commentsDb");
 
 /* ===================================================
    1. API: (User Login/Register)

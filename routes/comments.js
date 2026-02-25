@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../localdb");
+const pool = require("../commentsDb");
 
 // ==========================================
 // 4. Comments API
@@ -62,7 +62,25 @@ router.get("/", async (req, res) => {
 
     const result = await pool.query(query, [viewerId, limitNum, offsetNum]);
 
-    res.json(result.rows);
+    // res.json(result.rows);
+    const formattedData = result.rows.map((row) => ({
+      id: row.id,
+      content: row.content,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      user: {
+        display_name: row.display_name,
+        picture_url: row.picture_url,
+      },
+      like_count: row.like_count,
+      reply_count: row.reply_count,
+      is_liked: row.is_liked,
+      is_owner: row.is_owner,
+      is_edited: row.is_edited,
+    }));
+    // --------------------------
+
+    res.json(formattedData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -109,8 +127,10 @@ router.post("/", async (req, res) => {
     // 4. Response
     res.status(201).json({
       ...newComment,
-      display_name: user.display_name,
-      picture_url: user.picture_url,
+      user: {
+        display_name: user.display_name,
+        picture_url: user.picture_url,
+      },
       like_count: 0,
       reply_count: 0,
       is_liked: false,
@@ -270,7 +290,24 @@ router.get("/:comment_id/replies", async (req, res) => {
       limitNum,
       offsetNum,
     ]);
-    res.json(result.rows);
+    // res.json(result.rows);
+    const formattedData = result.rows.map((row) => ({
+      id: row.id,
+      content: row.content,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      user: {
+        // <--- Tạo object user lồng nhau
+        display_name: row.display_name,
+        picture_url: row.picture_url,
+      },
+      like_count: row.like_count,
+      reply_count: row.reply_count,
+      is_liked: row.is_liked,
+      is_owner: row.is_owner,
+      is_edited: row.is_edited,
+    }));
+    res.json(formattedData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -331,6 +368,22 @@ router.post("/:comment_id/like", async (req, res) => {
       is_liked: !is_liked,
       like_count: parseInt(countRes.rows[0].count),
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.get("/count", async (req, res) => {
+  try {
+    // 2. Main Query
+    const query = `
+      SELECT COUNT(*) FROM comments WHERE parent_id is null
+    `;
+
+    const result = await pool.query(query);
+
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal Server Error" });
