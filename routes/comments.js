@@ -273,7 +273,7 @@ router.get("/:comment_id/replies", async (req, res) => {
         c.id, c.content, c.created_at, c.updated_at,
         u.display_name, u.picture_url,
         (SELECT COUNT(*) FROM likes WHERE comment_id = c.id)::int AS like_count,
-        0 AS reply_count, 
+        (SELECT COUNT(*) FROM comments WHERE parent_id = c.id)::int AS reply_count,
         EXISTS(SELECT 1 FROM likes WHERE comment_id = c.id AND user_id = $1) AS is_liked,
         CASE WHEN c.user_id = $1 THEN TRUE ELSE FALSE END AS is_owner,
         (c.created_at < c.updated_at) AS is_edited
