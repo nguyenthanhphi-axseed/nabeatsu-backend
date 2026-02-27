@@ -238,7 +238,7 @@ router.delete("/:comment_id", async (req, res) => {
 router.get("/:comment_id/replies", async (req, res) => {
   const { comment_id } = req.params; // Parent ID
   const { line_user_id } = req.headers;
-  const { limit = 10, offset = 0 } = req.query;
+  const { limit = 100, offset = 0 } = req.query;
 
   if (isNaN(parseInt(limit)) || isNaN(parseInt(offset))) {
     return res.status(400).json({ message: "Invalid limit or offset" });
